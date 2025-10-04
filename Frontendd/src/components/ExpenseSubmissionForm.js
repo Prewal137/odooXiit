@@ -98,7 +98,7 @@ const ExpenseSubmissionForm = () => {
     setConvertedAmount(converted);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validation
@@ -111,13 +111,18 @@ const ExpenseSubmissionForm = () => {
     
     try {
       const expenseData = {
-        ...formData,
         amount: parseFloat(formData.amount),
-        date: new Date(formData.date).toISOString()
+        currency: formData.currency,
+        category: formData.category,
+        description: formData.description,
+        date: formData.date,
+        paidBy: formData.paidBy
+        // Note: In a real implementation, you would handle file upload separately
       };
       
-      submitExpense(expenseData);
-      showSuccess('Expense submitted successfully!');
+      // Submit expense using the API
+      const response = await submitExpense(expenseData);
+      showSuccess(response.message || 'Expense submitted successfully!');
       
       // Reset form
       setFormData({
@@ -132,7 +137,7 @@ const ExpenseSubmissionForm = () => {
       setReceiptPreview(null);
       setConvertedAmount(null);
     } catch (error) {
-      showError('Failed to submit expense. Please try again.');
+      showError(error.message || 'Failed to submit expense. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

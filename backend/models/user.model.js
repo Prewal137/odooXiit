@@ -1,5 +1,9 @@
 module.exports = (sequelize, Sequelize) => {
   const User = sequelize.define("users", {
+    name: {
+      type: Sequelize.STRING,
+      allowNull: true // Making it optional for now
+    },
     email: {
       type: Sequelize.STRING,
       allowNull: false,

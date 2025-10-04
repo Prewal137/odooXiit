@@ -9,7 +9,11 @@ const db = require('./models'); // Imports the models index file
 const app = express();
 
 // --- Middleware ---
-app.use(cors()); // Enable Cross-Origin Resource Sharing
+// Configure CORS to allow requests from the frontend
+app.use(cors({
+  origin: 'http://localhost:5173', // Vite's default port
+  credentials: true
+}));
 app.use(express.json()); // Parse incoming JSON requests
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded requests
 
@@ -26,10 +30,14 @@ db.sequelize.sync()
     console.log("Failed to sync db: " + err.message);
   });
 
-
 // --- Routes ---
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the Expense Management API!' });
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Backend is running' });
 });
 
 require('./routes/auth.routes')(app);

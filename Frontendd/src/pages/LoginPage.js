@@ -104,31 +104,22 @@ const LoginPage = () => {
     if (!validateForm()) return;
     
     setIsLoading(true);
+    setErrors({});
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Mock login - in a real app, this would call an API
-      const mockUser = {
-        id: 1,
-        name: formData.name || 'User',
-        email: formData.email,
-        role: 'admin' // Default to admin for demo
-      };
-      
-      login(mockUser);
+      // Call the actual login API
+      const result = await login(formData.email, formData.password);
       
       // Redirect based on role
-      if (mockUser.role === 'admin') {
+      if (result.user.role === 'admin') {
         navigate('/admin/dashboard');
-      } else if (mockUser.role === 'manager') {
+      } else if (result.user.role === 'manager') {
         navigate('/manager/dashboard');
       } else {
         navigate('/employee/dashboard');
       }
     } catch (error) {
-      setErrors({ general: 'Login failed. Please check your credentials and try again.' });
+      setErrors({ general: error.message || 'Login failed. Please check your credentials and try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -147,31 +138,26 @@ const LoginPage = () => {
     }
     
     setIsLoading(true);
+    setErrors({});
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      
-      // Create company with selected country's currency
-      const companyData = {
-        id: Date.now(),
-        name: formData.companyName,
+      // Prepare data for signup
+      const signupData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        companyName: formData.companyName,
         country: selectedCountry.code,
         currency: selectedCountry.currency
       };
       
-      const userData = {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password
-      };
-      
-      const result = signup(userData, companyData);
+      // Call the actual signup API
+      const result = await signup(signupData);
       
       // Redirect to admin dashboard (first user is admin)
       navigate('/admin/dashboard');
     } catch (error) {
-      setErrors({ general: 'Signup failed. Please try again.' });
+      setErrors({ general: error.message || 'Signup failed. Please try again.' });
     } finally {
       setIsLoading(false);
     }

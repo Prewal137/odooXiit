@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import apiClient from '../api/apiClient'; // Fixed import path
 
 const AuthContext = createContext();
 
@@ -13,146 +14,109 @@ export const AuthProvider = ({ children }) => {
   const [expenses, setExpenses] = useState([]);
   const [approvalRules, setApprovalRules] = useState([]);
 
-  const login = (userData) => {
-    setCurrentUser(userData);
+  // Login function that calls the backend API
+  const login = async (email, password) => {
+    try {
+      const response = await apiClient.post('/auth/signin', { email, password });
+      
+      // Save token to localStorage
+      localStorage.setItem('token', response.accessToken);
+      
+      // Set current user with the correct field names
+      const user = {
+        id: response.id,
+        name: response.name,
+        email: response.email,
+        role: response.role
+      };
+      
+      setCurrentUser(user);
+      
+      return { user, token: response.accessToken };
+    } catch (error) {
+      throw new Error(error.message || 'Login failed');
+    }
+  };
+
+  // Signup function that calls the backend API
+  const signup = async (userData) => {
+    try {
+      // For signup, we need to send the data in the format expected by the backend
+      const signupData = {
+        name: userData.name,
+        email: userData.email,
+        password: userData.password,
+        companyName: userData.companyName,
+        currency: userData.currency
+      };
+      
+      const response = await apiClient.post('/auth/signup', signupData);
+      
+      // After signup, we need to login to get the token and user data
+      const loginResponse = await login(userData.email, userData.password);
+      
+      return loginResponse;
+    } catch (error) {
+      throw new Error(error.message || 'Signup failed');
+    }
   };
 
   const logout = () => {
+    // Clear token from localStorage
+    localStorage.removeItem('token');
     setCurrentUser(null);
     setCompany(null);
   };
 
-  const signup = (userData, companyData) => {
-    // Create new user
-    const newUser = {
-      id: Date.now(),
-      ...userData,
-      role: 'admin', // First user is admin
-      companyId: companyData.id
-    };
-    
-    // Create company
-    const newCompany = {
-      id: companyData.id,
-      ...companyData,
-      adminId: newUser.id
-    };
-    
-    setCurrentUser(newUser);
-    setCompany(newCompany);
-    
-    // Add to users list
-    setUsers([newUser]);
-    
-    return { user: newUser, company: newCompany };
-  };
-
-  const createEmployee = (employeeData) => {
-    const newEmployee = {
-      id: Date.now(),
-      ...employeeData,
-      companyId: company.id,
-      role: 'employee'
-    };
-    
-    setUsers(prev => [...prev, newEmployee]);
-    return newEmployee;
-  };
-
-  const createManager = (managerData) => {
-    const newManager = {
-      id: Date.now(),
-      ...managerData,
-      companyId: company.id,
-      role: 'manager'
-    };
-    
-    setUsers(prev => [...prev, newManager]);
-    return newManager;
-  };
-
-  const updateUserRole = (userId, newRole) => {
-    setUsers(prev => prev.map(user => 
-      user.id === userId ? { ...user, role: newRole } : user
-    ));
-    
-    if (currentUser.id === userId) {
-      setCurrentUser(prev => ({ ...prev, role: newRole }));
+  // Expense submission function that calls the backend API
+  const submitExpense = async (expenseData) => {
+    try {
+      const response = await apiClient.post('/expenses', expenseData);
+      return response;
+    } catch (error) {
+      throw new Error(error.message || 'Failed to submit expense');
     }
   };
 
-  const submitExpense = (expenseData) => {
-    const newExpense = {
-      id: Date.now(),
-      ...expenseData,
-      userId: currentUser.id,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      approvalHistory: [] // Track approval history
-    };
-    
-    setExpenses(prev => [...prev, newExpense]);
-    return newExpense;
+  // Get user expenses from backend
+  const getUserExpenses = async () => {
+    try {
+      const response = await apiClient.get(`/expenses`);
+      return response;
+    } catch (error) {
+      throw new Error(error.message || 'Failed to fetch expenses');
+    }
   };
 
-  const updateExpenseStatus = (expenseId, status, approverId, comments = '') => {
-    setExpenses(prev => prev.map(expense => {
-      if (expense.id === expenseId) {
-        // Add to approval history
-        const updatedHistory = [
-          ...expense.approvalHistory,
-          {
-            approverId,
-            status,
-            comments,
-            timestamp: new Date().toISOString()
-          }
-        ];
-        
-        return {
-          ...expense,
-          status,
-          approverId,
-          comments,
-          approvalHistory: updatedHistory,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return expense;
-    }));
+  // Get all expenses (for admin)
+  const getAllExpenses = async () => {
+    try {
+      const response = await apiClient.get(`/expenses`);
+      return response;
+    } catch (error) {
+      throw new Error(error.message || 'Failed to fetch expenses');
+    }
   };
 
-  const getUserExpenses = (userId) => {
-    return expenses.filter(expense => expense.userId === userId);
+  // Get pending expenses for manager approval
+  const getPendingExpenses = async () => {
+    try {
+      const response = await apiClient.get(`/expenses/pending`);
+      return response;
+    } catch (error) {
+      throw new Error(error.message || 'Failed to fetch pending expenses');
+    }
   };
 
-  const getTeamExpenses = (managerId) => {
-    // Get employees who report to this manager
-    const teamMembers = users.filter(user => 
-      user.role === 'employee' && user.managerId === managerId
-    );
-    
-    const teamMemberIds = teamMembers.map(member => member.id);
-    
-    // Get expenses from team members
-    return expenses.filter(expense => 
-      teamMemberIds.includes(expense.userId)
-    );
-  };
-
-  const getAllExpenses = () => {
-    return expenses;
-  };
-
-  const createApprovalRule = (ruleData) => {
-    const newRule = {
-      id: Date.now(),
-      ...ruleData
-    };
-    
-    setApprovalRules(prev => [...prev, newRule]);
-    return newRule;
+  // Update expense status (approve/reject)
+  const updateExpenseStatus = async (expenseId, status, comments = '') => {
+    try {
+      // The backend expects status to be "Approved" or "Rejected"
+      const response = await apiClient.put(`/expenses/${expenseId}/status`, { status, comments });
+      return response;
+    } catch (error) {
+      throw new Error(error.message || 'Failed to update expense status');
+    }
   };
 
   const value = {
@@ -164,15 +128,11 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     signup,
-    createEmployee,
-    createManager,
-    updateUserRole,
     submitExpense,
-    updateExpenseStatus,
     getUserExpenses,
-    getTeamExpenses,
     getAllExpenses,
-    createApprovalRule
+    getPendingExpenses,
+    updateExpenseStatus
   };
 
   return (

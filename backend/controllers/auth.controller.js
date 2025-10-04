@@ -16,13 +16,22 @@ exports.signup = async (req, res) => {
 
     // Create a new User (Admin) for that company
     const user = await User.create({
+      name: req.body.name,
       email: req.body.email,
       password: bcrypt.hashSync(req.body.password, 8),
       role: 'Admin', // First user is always an Admin
       companyId: company.id
     });
 
-    res.send({ message: "User was registered successfully!" });
+    res.send({ 
+      message: "User was registered successfully!",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
 
   } catch (error) {
     res.status(500).send({ message: error.message });
@@ -52,9 +61,11 @@ exports.signin = async (req, res) => {
 
     res.status(200).send({
       id: user.id,
+      name: user.name,
       email: user.email,
       role: user.role,
-      accessToken: token
+      accessToken: token,
+      message: "Login successful"
     });
   } catch (error) {
     res.status(500).send({ message: error.message });

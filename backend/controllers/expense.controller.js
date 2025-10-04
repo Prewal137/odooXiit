@@ -4,15 +4,26 @@ const Expense = db.expense;
 // Create and Save a new Expense
 exports.create = async (req, res) => {
   try {
-    const expense = await Expense.create({
+    // Prepare expense data
+    const expenseData = {
       description: req.body.description,
       amount: req.body.amount,
       currency: req.body.currency,
       category: req.body.category,
       date: req.body.date,
       userId: req.userId // Set from the JWT middleware
+    };
+    
+    // Add paidBy field if it exists in the request
+    if (req.body.paidBy) {
+      expenseData.paidBy = req.body.paidBy;
+    }
+
+    const expense = await Expense.create(expenseData);
+    res.send({ 
+      message: "Expense submitted successfully!", 
+      data: expense 
     });
-    res.send({ message: "Expense submitted successfully!", data: expense });
   } catch (error) {
     res.status(500).send({ message: error.message });
   }
@@ -44,13 +55,13 @@ exports.findPending = async (req, res) => {
 exports.updateStatus = async (req, res) => {
     try {
         const id = req.params.id;
-        const { status } = req.body; // Expecting { "status": "Approved" } or { "status": "Rejected" }
+        const { status, comments } = req.body; // Expecting { "status": "Approved" } or { "status": "Rejected" }
 
         if (!['Approved', 'Rejected'].includes(status)) {
             return res.status(400).send({ message: "Invalid status." });
         }
 
-        const [num] = await Expense.update({ status: status }, { where: { id: id } });
+        const [num] = await Expense.update({ status: status, comments: comments }, { where: { id: id } });
 
         if (num === 1) {
             res.send({ message: "Expense status was updated successfully." });

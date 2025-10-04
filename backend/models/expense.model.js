@@ -26,6 +26,10 @@ module.exports = (sequelize, Sequelize) => {
     },
     receiptUrl: {
       type: Sequelize.STRING // URL to the stored receipt image
+    },
+    paidBy: {
+      type: Sequelize.STRING,
+      defaultValue: 'Employee'
     }
   });
 

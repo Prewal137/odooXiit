@@ -11,3 +11,10 @@ module.exports = {
     idle: 10000
   }
 };
+
+// Debug logging
+console.log('Database configuration:');
+console.log('Host:', process.env.DB_HOST);
+console.log('User:', process.env.DB_USER);
+console.log('Password:', process.env.DB_PASSWORD ? '***' : 'NOT SET');
+console.log('Database:', process.env.DB_NAME);
